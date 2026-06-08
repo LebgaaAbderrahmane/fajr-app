@@ -14,7 +14,6 @@ class _LocationSetupScreenState extends State<LocationSetupScreen> {
   final TextEditingController _lonController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
 
-  bool _useAutoLocation = true;
   LocationData? _currentLocation;
   bool _isLoading = false;
   String? _error;
@@ -30,7 +29,6 @@ class _LocationSetupScreenState extends State<LocationSetupScreen> {
     final useAuto = await _locationService.getUseAutoLocation();
     final saved = await _locationService.getSavedLocation();
     setState(() {
-      _useAutoLocation = useAuto;
       _currentLocation = saved;
       if (saved != null && !useAuto) {
         _latController.text = saved.latitude.toString();
@@ -53,7 +51,6 @@ class _LocationSetupScreenState extends State<LocationSetupScreen> {
       await _locationService.setUseAutoLocation(true);
       setState(() {
         _currentLocation = location;
-        _useAutoLocation = true;
         _isLoading = false;
       });
       if (mounted) {
@@ -98,7 +95,6 @@ class _LocationSetupScreenState extends State<LocationSetupScreen> {
     await _locationService.setUseAutoLocation(false);
     setState(() {
       _currentLocation = location;
-      _useAutoLocation = false;
       _isLoading = false;
     });
 

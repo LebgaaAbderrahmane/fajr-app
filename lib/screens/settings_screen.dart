@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import '../services/settings_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -13,6 +12,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final SettingsService _settingsService = SettingsService();
   AlarmSettings _settings = const AlarmSettings();
   bool _isLoading = true;
+
+  final List<Map<String, String>> _alarmSounds = [
+    {'name': 'Default Adhan', 'path': 'default'},
+    {'name': 'Adhan - Makkah', 'path': 'makkah'},
+    {'name': 'Adhan - Madinah', 'path': 'madinah'},
+    {'name': 'Adhan - Al-Aqsa', 'path': 'alaqsa'},
+    {'name': 'Simple Alarm', 'path': 'simple'},
+  ];
 
   @override
   void initState() {
@@ -37,27 +44,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _pickAlarmSound() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.audio,
-      );
-
-      if (result != null && result.files.single.path != null) {
-        setState(() {
-          _settings = _settings.copyWith(
-            alarmSoundPath: result.files.single.path!,
-          );
-        });
-        await _saveSettings();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking file: $e')),
+  void _selectSound() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Select Alarm Sound',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              ..._alarmSounds.map(
+                (sound) => ListTile(
+                  leading: Radio<String>(
+                    value: sound['path']!,
+                    groupValue: _settings.alarmSoundPath,
+                    onChanged: null,
+                  ),
+                  title: Text(sound['name']!),
+                  selected: _settings.alarmSoundPath == sound['path'],
+                  onTap: () {
+                    setState(() {
+                      _settings = _settings.copyWith(alarmSoundPath: sound['path']!);
+                    });
+                    _saveSettings();
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         );
-      }
+      },
+    );
+  }
+
+  String _getSoundDisplayName(String path) {
+    for (var sound in _alarmSounds) {
+      if (sound['path'] == path) return sound['name']!;
     }
+    return path;
   }
 
   void _resetToDefault() {
@@ -114,13 +146,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: ListTile(
               leading: const Icon(Icons.music_note),
               title: const Text('Alarm Sound'),
-              subtitle: Text(
-                _settings.alarmSoundPath == 'default'
-                    ? 'Default Adhan'
-                    : _settings.alarmSoundPath.split('/').last,
-              ),
+              subtitle: Text(_getSoundDisplayName(_settings.alarmSoundPath)),
               trailing: const Icon(Icons.chevron_right),
-              onTap: _pickAlarmSound,
+              onTap: _selectSound,
             ),
           ),
 
