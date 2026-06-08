@@ -2,8 +2,9 @@ package com.example.fajr_alarm
 
 import android.app.Activity
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.media.RingtoneManager
-import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -17,6 +18,7 @@ class MainActivity : FlutterActivity() {
     private val PICK_AUDIO_REQUEST = 1001
     private var resultPending: MethodChannel.Result? = null
     private var currentRingtone: android.media.Ringtone? = null
+    private var mediaPlayer: MediaPlayer? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -24,14 +26,15 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "playSystemAlarm" -> {
-                        val type = call.argument<Int>("type") ?: 0
+                    "playAlarm" -> {
+                        val soundPath = call.argument<String>("soundPath") ?: "default"
                         val volume = call.argument<Int>("volume") ?: 80
-                        playSystemAlarm(type, volume)
+                        val useVibrate = call.argument<Boolean>("vibrate") ?: true
+                        playAlarmNative(soundPath, volume, useVibrate)
                         result.success(null)
                     }
-                    "stopSystemAlarm" -> {
-                        stopSystemAlarm()
+                    "stopAlarm" -> {
+                        stopAllAudio()
                         result.success(null)
                     }
                     "pickAudioFile" -> {
@@ -58,29 +61,71 @@ class MainActivity : FlutterActivity() {
             }
     }
 
-    private fun playSystemAlarm(type: Int, volume: Int) {
-        stopSystemAlarm()
-        val uri = when (type) {
-            1 -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            2 -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            else -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-        }
-        if (uri != null) {
-            currentRingtone = RingtoneManager.getRingtone(applicationContext, uri)
-            currentRingtone?.let {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    it.isLooping = true
-                }
-                it.play()
+    private fun playAlarmNative(soundPath: String, volume: Int, useVibrate: Boolean) {
+        stopAllAudio()
+
+        val vol = volume / 100.0f
+
+        if (soundPath.startsWith("content://")) {
+            val uri = android.net.Uri.parse(soundPath)
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build()
+                )
+                setDataSource(applicationContext, uri)
+                isLooping = true
+                setVolume(vol, vol)
+                prepare()
+                start()
             }
+        } else if (soundPath.startsWith("/")) {
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build()
+                )
+                setDataSource(soundPath)
+                isLooping = true
+                setVolume(vol, vol)
+                prepare()
+                start()
+            }
+        } else {
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            if (uri != null) {
+                currentRingtone = RingtoneManager.getRingtone(applicationContext, uri)
+                currentRingtone?.let {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        it.isLooping = true
+                    }
+                    it.play()
+                }
+            }
+        }
+
+        if (useVibrate) {
+            vibrate()
         }
     }
 
-    private fun stopSystemAlarm() {
+    private fun stopAllAudio() {
+        mediaPlayer?.let {
+            if (it.isPlaying) it.stop()
+            it.release()
+        }
+        mediaPlayer = null
+
         currentRingtone?.let {
             if (it.isPlaying) it.stop()
         }
         currentRingtone = null
+
+        stopVibrate()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -125,5 +170,10 @@ class MainActivity : FlutterActivity() {
             @Suppress("DEPRECATION")
             getSystemService(Vibrator::class.java).cancel()
         }
+    }
+
+    override fun onDestroy() {
+        stopAllAudio()
+        super.onDestroy()
     }
 }

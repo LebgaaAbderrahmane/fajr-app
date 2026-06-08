@@ -274,6 +274,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
 
           Card(
+            child: SwitchListTile(
+              title: const Text('Hard Mode'),
+              subtitle: const Text(
+                'Must solve math to dismiss alarm',
+              ),
+              value: _settings.hardMode,
+              onChanged: (value) {
+                setState(() {
+                  _settings = _settings.copyWith(hardMode: value);
+                });
+                _saveSettings();
+              },
+              secondary: Icon(
+                Icons.psychology,
+                color: _settings.hardMode ? Colors.orange : Colors.grey,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(

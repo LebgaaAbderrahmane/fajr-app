@@ -35,7 +35,6 @@ dependencies:
   geolocator: ^14.0.0
   geocoding: ^4.0.0
   adhan: ^2.0.0+1
-  just_audio: ^0.9.43
   shared_preferences: ^2.5.0
   permission_handler: ^11.4.0
   flutter_local_notifications: ^18.0.1
