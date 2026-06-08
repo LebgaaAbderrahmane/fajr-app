@@ -14,7 +14,7 @@ class AlarmSettings {
     this.vibrate = true,
     this.reminderMinutesBefore = 10,
     this.isEnabled = true,
-    this.hardMode = false,
+    this.hardMode = true,
   });
 
   AlarmSettings copyWith({
@@ -62,7 +62,7 @@ class SettingsService {
       vibrate: prefs.getBool(_vibrateKey) ?? true,
       reminderMinutesBefore: prefs.getInt(_reminderKey) ?? 10,
       isEnabled: prefs.getBool(_enabledKey) ?? true,
-      hardMode: prefs.getBool(_hardModeKey) ?? false,
+      hardMode: prefs.getBool(_hardModeKey) ?? true,
     );
   }
 }

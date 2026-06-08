@@ -6,8 +6,13 @@ import '../services/settings_service.dart';
 
 class AlarmRingingScreen extends StatefulWidget {
   final AlarmSettings settings;
+  final bool testMode;
 
-  const AlarmRingingScreen({super.key, required this.settings});
+  const AlarmRingingScreen({
+    super.key,
+    required this.settings,
+    this.testMode = false,
+  });
 
   @override
   State<AlarmRingingScreen> createState() => _AlarmRingingScreenState();
@@ -150,6 +155,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     final minute = now.minute.toString().padLeft(2, '0');
     final period = now.period == DayPeriod.am ? 'AM' : 'PM';
     final isHardMode = widget.settings.hardMode;
+    final isTestMode = widget.testMode;
 
     return PopScope(
       canPop: false,
@@ -218,7 +224,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                   ),
                 ),
 
-                if (isHardMode) ...[
+                if (isHardMode && isTestMode) ...[
                   const SizedBox(height: 30),
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 40),
@@ -320,77 +326,91 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
 
                 const Spacer(flex: 2),
 
-                if (_isDismissing)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 60),
-                    child: CircularProgressIndicator(color: Colors.white),
-                  )
-                else
+                if (isTestMode)
+                  if (_isDismissing)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 60),
+                      child: CircularProgressIndicator(color: Colors.white),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: _dismissAlarm,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(28),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    isHardMode && !_challengeVerified
+                                        ? Icons.check
+                                        : Icons.stop,
+                                    size: 28,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    isHardMode && !_challengeVerified
+                                        ? 'Submit Answer'
+                                        : 'Stop Alarm',
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: OutlinedButton(
+                              onPressed: _snoozeAlarm,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: const BorderSide(color: Colors.white30),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(28),
+                                ),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.snooze, size: 28),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    'Snooze 10 min',
+                                    style: TextStyle(fontSize: 18),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                if (!isTestMode)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 40),
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: ElevatedButton(
-                            onPressed: _dismissAlarm,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(28),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  isHardMode && !_challengeVerified
-                                      ? Icons.check
-                                      : Icons.stop,
-                                  size: 28,
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  isHardMode && !_challengeVerified
-                                      ? 'Submit Answer'
-                                      : 'Stop Alarm',
-                                  style: const TextStyle(fontSize: 18),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: OutlinedButton(
-                            onPressed: _snoozeAlarm,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              side: const BorderSide(color: Colors.white30),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(28),
-                              ),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.snooze, size: 28),
-                                SizedBox(width: 12),
-                                Text(
-                                  'Snooze 10 min',
-                                  style: TextStyle(fontSize: 18),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Alarm will stop when the adhan ends',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
 

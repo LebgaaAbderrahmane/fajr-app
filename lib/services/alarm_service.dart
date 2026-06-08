@@ -37,4 +37,15 @@ class AlarmService {
       return null;
     }
   }
+
+  Future<String?> getDisplayName(String uri) async {
+    try {
+      final result = await _channel.invokeMethod<String>('getDisplayName', {
+        'uri': uri,
+      });
+      return result;
+    } catch (_) {
+      return null;
+    }
+  }
 }

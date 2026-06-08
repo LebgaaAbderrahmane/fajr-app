@@ -48,6 +48,11 @@ class MainActivity : FlutterActivity() {
                             PICK_AUDIO_REQUEST
                         )
                     }
+                    "getDisplayName" -> {
+                        val uriStr = call.argument<String>("uri") ?: ""
+                        val name = getDisplayNameFromUri(uriStr)
+                        result.success(name)
+                    }
                     "vibrate" -> {
                         vibrate()
                         result.success(null)
@@ -59,6 +64,23 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun getDisplayNameFromUri(uriStr: String): String? {
+        if (uriStr.isEmpty()) return null
+        val uri = android.net.Uri.parse(uriStr)
+        if (uri.scheme == "content") {
+            val cursor = contentResolver.query(uri, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex >= 0) {
+                        return it.getString(nameIndex)
+                    }
+                }
+            }
+        }
+        return uri.lastPathSegment
     }
 
     private fun playAlarmNative(soundPath: String, volume: Int, useVibrate: Boolean) {

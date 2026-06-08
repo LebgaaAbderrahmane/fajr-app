@@ -16,6 +16,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   AlarmSettings _settings = const AlarmSettings();
   bool _isLoading = true;
   bool _isTestingAlarm = false;
+  String? _customSoundName;
 
   final List<Map<String, String>> _alarmSounds = [
     {'name': 'Default Adhan', 'path': 'default'},
@@ -33,8 +34,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final settings = await _settingsService.getSettings();
+    String? customName;
+    if (settings.alarmSoundPath.startsWith('content://')) {
+      customName = await _alarmService.getDisplayName(settings.alarmSoundPath);
+    }
     setState(() {
       _settings = settings;
+      _customSoundName = customName;
       _isLoading = false;
     });
   }
@@ -125,8 +131,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _pickCustomSound() async {
     final path = await _alarmService.pickAudioFile();
     if (path != null && mounted) {
+      final name = await _alarmService.getDisplayName(path);
       setState(() {
         _settings = _settings.copyWith(alarmSoundPath: path);
+        _customSoundName = name;
       });
       _saveSettings();
     }
@@ -134,10 +142,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _getSoundDisplayName(String path) {
     if (path.startsWith('content://') || path.startsWith('/')) {
-      final fileName = path.split('/').last.split('%2F').last;
-      return fileName.length > 30
-          ? '${fileName.substring(0, 27)}...'
-          : fileName;
+      if (_customSoundName != null) {
+        final name = _customSoundName!;
+        return name.length > 30 ? '${name.substring(0, 27)}...' : name;
+      }
+      return 'Custom audio file';
     }
     for (var sound in _alarmSounds) {
       if (sound['path'] == path) return sound['name']!;
@@ -158,7 +167,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AlarmRingingScreen(settings: _settings),
+        builder: (context) => AlarmRingingScreen(
+          settings: _settings,
+          testMode: true,
+        ),
       ),
     );
 
@@ -268,28 +280,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _saveSettings();
               },
               secondary: const Icon(Icons.vibration),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          Card(
-            child: SwitchListTile(
-              title: const Text('Hard Mode'),
-              subtitle: const Text(
-                'Must solve math to dismiss alarm',
-              ),
-              value: _settings.hardMode,
-              onChanged: (value) {
-                setState(() {
-                  _settings = _settings.copyWith(hardMode: value);
-                });
-                _saveSettings();
-              },
-              secondary: Icon(
-                Icons.psychology,
-                color: _settings.hardMode ? Colors.orange : Colors.grey,
-              ),
             ),
           ),
 
