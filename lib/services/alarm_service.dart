@@ -7,6 +7,7 @@ class AlarmService {
   static const MethodChannel _channel = MethodChannel('com.fajr_alarm/file_picker');
   final AudioPlayer _player = AudioPlayer();
   bool _isPlaying = false;
+  bool _usingNative = false;
 
   bool get isPlaying => _isPlaying;
 
@@ -16,18 +17,23 @@ class AlarmService {
     try {
       if (settings.alarmSoundPath.startsWith('content://') ||
           settings.alarmSoundPath.startsWith('/')) {
+        _usingNative = false;
         if (settings.alarmSoundPath.startsWith('content://')) {
           await _player.setUrl(settings.alarmSoundPath);
         } else {
           await _player.setFilePath(settings.alarmSoundPath);
         }
+        await _player.setVolume(settings.volume / 100.0);
+        await _player.setLoopMode(LoopMode.one);
+        await _player.play();
       } else {
-        await _player.setAsset('assets/sounds/${settings.alarmSoundPath}.mp3');
+        _usingNative = true;
+        await _channel.invokeMethod('playSystemAlarm', {
+          'type': 1,
+          'volume': settings.volume,
+        });
       }
 
-      await _player.setVolume(settings.volume / 100.0);
-      await _player.setLoopMode(LoopMode.one);
-      await _player.play();
       _isPlaying = true;
 
       if (settings.vibrate) {
@@ -40,7 +46,13 @@ class AlarmService {
 
   Future<void> stopAlarm() async {
     if (!_isPlaying) return;
-    await _player.stop();
+
+    if (_usingNative) {
+      await _channel.invokeMethod('stopSystemAlarm');
+    } else {
+      await _player.stop();
+    }
+
     _isPlaying = false;
     await _stopVibration();
   }
@@ -68,12 +80,5 @@ class AlarmService {
     } catch (_) {
       return null;
     }
-  }
-
-  Future<void> testAlarm(AlarmSettings settings) async {
-    await playAlarm(settings);
-    Future.delayed(const Duration(seconds: 5), () {
-      stopAlarm();
-    });
   }
 }

@@ -18,6 +18,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
   late AnimationController _animController;
   late Animation<double> _pulseAnimation;
   bool _isDismissing = false;
+  bool _hasStarted = false;
 
   @override
   void initState() {
@@ -32,18 +33,25 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     );
 
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    _alarmService.playAlarm(widget.settings);
+    _startAlarm();
+  }
+
+  Future<void> _startAlarm() async {
+    if (_hasStarted) return;
+    _hasStarted = true;
+    await _alarmService.playAlarm(widget.settings);
   }
 
   @override
   void dispose() {
-    _animController.dispose();
     _alarmService.stopAlarm();
+    _animController.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
   void _dismissAlarm() async {
+    if (_isDismissing) return;
     setState(() => _isDismissing = true);
     await _alarmService.stopAlarm();
     if (mounted) {
@@ -52,6 +60,8 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
   }
 
   void _snoozeAlarm() async {
+    if (_isDismissing) return;
+    setState(() => _isDismissing = true);
     await _alarmService.stopAlarm();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -138,7 +148,10 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                 const Spacer(flex: 2),
 
                 if (_isDismissing)
-                  const CircularProgressIndicator(color: Colors.white)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 60),
+                    child: CircularProgressIndicator(color: Colors.white),
+                  )
                 else
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 40),
