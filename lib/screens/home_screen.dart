@@ -19,7 +19,6 @@ class _HomeScreenState extends State<HomeScreen> {
   PrayerTimeData? _fajrTime;
   String? _timeUntilFajr;
   bool _isLoading = true;
-  bool _alarmSet = false;
 
   @override
   void initState() {
@@ -178,34 +177,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 subtitle: Text(_location!.displayName),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: _navigateToLocationSetup,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  setState(() => _alarmSet = !_alarmSet);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        _alarmSet ? 'Alarm enabled' : 'Alarm disabled',
-                      ),
-                    ),
-                  );
-                },
-                icon: Icon(_alarmSet ? Icons.alarm : Icons.alarm_off),
-                label: Text(
-                  _alarmSet ? 'Alarm is Set' : 'Set Fajr Alarm',
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor:
-                      _alarmSet ? Colors.green : Colors.indigo,
-                  foregroundColor: Colors.white,
-                ),
               ),
             ),
 
