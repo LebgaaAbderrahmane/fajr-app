@@ -235,7 +235,7 @@ class _LocationSetupScreenState extends State<LocationSetupScreen> {
                       labelText: 'City Name (optional)',
                       hintText: 'e.g. Algiers',
                       border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.city),
+                      prefixIcon: Icon(Icons.location_city),
                     ),
                   ),
                   const SizedBox(height: 20),
