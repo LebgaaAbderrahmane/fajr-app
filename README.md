@@ -1,17 +1,43 @@
-# fajr_alarm
+# Fajr Alarm
 
-A new Flutter project.
+A prayer alarm app that calculates accurate Fajr prayer times based on your location and wakes you up with an alarm you can't easily dismiss.
+
+## Features
+
+- **Accurate Fajr times** — Uses the Adhan library with the Muslim World League calculation method
+- **Auto-detect location** — GPS-based or manual latitude/longitude input
+- **All 6 prayer times** — Displays Fajr, Sunrise, Dhuhr, Asr, Maghrib, and Isha with countdown to Fajr
+- **Hard-to-stop alarm** — Once triggered, the alarm plays until the adhan audio ends; no stop or snooze button on real alarms
+- **Persistent notification** — Alarm runs as a foreground service, so it works even when the app is fully closed
+- **Custom sounds** — Choose from preset adhans or pick any audio file from your device
+- **Test mode** — Preview your alarm with a simple stop button from the settings page
+- **Adjustable settings** — Volume control, vibration toggle, and reminder timing
+
+## Tech Stack
+
+- **Flutter** — Cross-platform UI framework
+- **Adhan** — Islamic prayer time calculation
+- **Geolocator + Geocoding** — Location services
+- **Native Android** — Foreground service, MediaPlayer, RingtoneManager (Kotlin)
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+```bash
+flutter pub get
+flutter run
+```
 
-A few resources to get you started if this is your first Flutter project:
+Requires Android SDK 36+ and a connected device or emulator.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Permissions
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Location (GPS or manual)
+- Alarm scheduling
+- Notifications
+- Foreground service
+- Vibration
+- Boot completed (to reschedule alarms)
+
+## License
+
+Private project — not published to pub.dev.
