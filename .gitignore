@@ -12,6 +12,9 @@
 .swiftpm/
 migrate_working_dir/
 
+AGENTS.md
+skills/
+
 # IntelliJ related
 *.iml
 *.ipr
