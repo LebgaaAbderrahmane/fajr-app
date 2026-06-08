@@ -92,13 +92,13 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
   Future<void> _startAlarm() async {
     if (_hasStarted) return;
     _hasStarted = true;
-    await _alarmService.playAlarm(widget.settings);
+    await _alarmService.playAlarm(widget.settings, testMode: widget.testMode);
   }
 
   @override
   void dispose() {
     if (widget.testMode) {
-      _alarmService.stopAlarm();
+      _alarmService.stopAlarm(testMode: true);
     }
     _animController.dispose();
     _answerController.dispose();
@@ -132,7 +132,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
     }
 
     setState(() => _isDismissing = true);
-    await _alarmService.stopAlarm();
+    await _alarmService.stopAlarm(testMode: widget.testMode);
     if (mounted) {
       Navigator.of(context).pop();
     }
@@ -141,7 +141,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
   void _snoozeAlarm() async {
     if (_isDismissing) return;
     setState(() => _isDismissing = true);
-    await _alarmService.stopAlarm();
+    await _alarmService.stopAlarm(testMode: widget.testMode);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Snoozed for 10 minutes')),

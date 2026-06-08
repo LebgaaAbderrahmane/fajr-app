@@ -8,7 +8,7 @@ class AlarmService {
 
   bool get isPlaying => _isPlaying;
 
-  Future<void> playAlarm(AlarmSettings settings) async {
+  Future<void> playAlarm(AlarmSettings settings, {bool testMode = false}) async {
     if (_isPlaying) return;
 
     try {
@@ -16,6 +16,7 @@ class AlarmService {
         'soundPath': settings.alarmSoundPath,
         'volume': settings.volume,
         'vibrate': settings.vibrate,
+        'testMode': testMode,
       });
       _isPlaying = true;
     } catch (e) {
@@ -23,9 +24,9 @@ class AlarmService {
     }
   }
 
-  Future<void> stopAlarm() async {
+  Future<void> stopAlarm({bool testMode = false}) async {
     if (!_isPlaying) return;
-    await _channel.invokeMethod('stopAlarm');
+    await _channel.invokeMethod('stopAlarm', {'testMode': testMode});
     _isPlaying = false;
   }
 
