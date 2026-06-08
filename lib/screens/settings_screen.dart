@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/settings_service.dart';
+import '../services/alarm_service.dart';
+import 'alarm_ringing_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,8 +12,10 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final SettingsService _settingsService = SettingsService();
+  final AlarmService _alarmService = AlarmService();
   AlarmSettings _settings = const AlarmSettings();
   bool _isLoading = true;
+  bool _isTestingAlarm = false;
 
   final List<Map<String, String>> _alarmSounds = [
     {'name': 'Default Adhan', 'path': 'default'},
@@ -47,45 +51,94 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _selectSound() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'Select Alarm Sound',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-              ..._alarmSounds.map(
-                (sound) => ListTile(
-                  leading: Radio<String>(
-                    value: sound['path']!,
-                    groupValue: _settings.alarmSoundPath,
-                    onChanged: null,
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  title: Text(sound['name']!),
-                  selected: _settings.alarmSoundPath == sound['path'],
-                  onTap: () {
-                    setState(() {
-                      _settings = _settings.copyWith(alarmSoundPath: sound['path']!);
-                    });
-                    _saveSettings();
-                    Navigator.pop(context);
-                  },
                 ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'Select Alarm Sound',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    children: [
+                      ..._alarmSounds.map(
+                        (sound) => ListTile(
+                          leading: Radio<String>(
+                            value: sound['path']!,
+                            groupValue: _settings.alarmSoundPath,
+                            onChanged: null,
+                          ),
+                          title: Text(sound['name']!),
+                          selected: _settings.alarmSoundPath == sound['path'],
+                          onTap: () {
+                            setState(() {
+                              _settings = _settings.copyWith(
+                                alarmSoundPath: sound['path']!,
+                              );
+                            });
+                            _saveSettings();
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ),
+                      const Divider(),
+                      ListTile(
+                        leading: const Icon(Icons.folder_open),
+                        title: const Text('Choose from phone'),
+                        subtitle: const Text('Pick an audio file from your device'),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          await _pickCustomSound();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 
+  Future<void> _pickCustomSound() async {
+    final path = await _alarmService.pickAudioFile();
+    if (path != null && mounted) {
+      setState(() {
+        _settings = _settings.copyWith(alarmSoundPath: path);
+      });
+      _saveSettings();
+    }
+  }
+
   String _getSoundDisplayName(String path) {
+    if (path.startsWith('content://') || path.startsWith('/')) {
+      final fileName = path.split('/').last.split('%2F').last;
+      return fileName.length > 30
+          ? '${fileName.substring(0, 27)}...'
+          : fileName;
+    }
     for (var sound in _alarmSounds) {
       if (sound['path'] == path) return sound['name']!;
     }
@@ -97,6 +150,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _settings = const AlarmSettings();
     });
     _saveSettings();
+  }
+
+  void _testAlarm() async {
+    setState(() => _isTestingAlarm = true);
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AlarmRingingScreen(settings: _settings),
+      ),
+    );
+
+    setState(() => _isTestingAlarm = false);
   }
 
   @override
@@ -237,6 +303,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChangeEnd: (_) => _saveSettings(),
                   ),
                 ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: _isTestingAlarm ? null : _testAlarm,
+              icon: _isTestingAlarm
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.play_arrow),
+              label: Text(
+                _isTestingAlarm ? 'Playing...' : 'Test Alarm',
+                style: const TextStyle(fontSize: 16),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
