@@ -97,7 +97,9 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
 
   @override
   void dispose() {
-    _alarmService.stopAlarm();
+    if (widget.testMode) {
+      _alarmService.stopAlarm();
+    }
     _animController.dispose();
     _answerController.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -405,7 +407,7 @@ class _AlarmRingingScreenState extends State<AlarmRingingScreen>
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 40),
                     child: Text(
-                      'Alarm will stop when the adhan ends',
+                      'Alarm will stop when the adhan ends.\nYou can also stop it from the notification.',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.4),
                         fontSize: 14,
