@@ -30,6 +30,42 @@ class AlarmService {
     _isPlaying = false;
   }
 
+  Future<void> scheduleAlarm({
+    required DateTime fajrTime,
+    required AlarmSettings settings,
+  }) async {
+    final triggerTime = fajrTime.subtract(
+      Duration(minutes: settings.reminderMinutesBefore),
+    );
+
+    if (triggerTime.isBefore(DateTime.now())) return;
+
+    await _channel.invokeMethod('scheduleAlarm', {
+      'triggerAtMillis': triggerTime.millisecondsSinceEpoch,
+      'fajrTimeMillis': fajrTime.millisecondsSinceEpoch,
+      'soundPath': settings.alarmSoundPath,
+      'volume': settings.volume,
+      'vibrate': settings.vibrate,
+    });
+  }
+
+  Future<void> scheduleTestAlarm(int delayMinutes) async {
+    final triggerAt = DateTime.now().add(Duration(minutes: delayMinutes));
+    final settings = await SettingsService().getSettings();
+
+    await _channel.invokeMethod('scheduleAlarm', {
+      'triggerAtMillis': triggerAt.millisecondsSinceEpoch,
+      'fajrTimeMillis': triggerAt.millisecondsSinceEpoch,
+      'soundPath': settings.alarmSoundPath,
+      'volume': settings.volume,
+      'vibrate': settings.vibrate,
+    });
+  }
+
+  Future<void> cancelAlarm() async {
+    await _channel.invokeMethod('cancelAlarm');
+  }
+
   Future<String?> pickAudioFile() async {
     try {
       final result = await _channel.invokeMethod<String>('pickAudioFile');

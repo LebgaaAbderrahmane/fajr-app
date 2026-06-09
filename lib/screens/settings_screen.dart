@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/settings_service.dart';
 import '../services/alarm_service.dart';
-import 'alarm_ringing_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -15,7 +14,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final AlarmService _alarmService = AlarmService();
   AlarmSettings _settings = const AlarmSettings();
   bool _isLoading = true;
-  bool _isTestingAlarm = false;
   String? _customSoundName;
 
   final List<Map<String, String>> _alarmSounds = [
@@ -34,9 +32,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final settings = await _settingsService.getSettings();
-    String? customName;
-    if (settings.alarmSoundPath.startsWith('content://')) {
+    String? customName = settings.alarmSoundName;
+    if (settings.alarmSoundPath.startsWith('content://') && customName == null) {
       customName = await _alarmService.getDisplayName(settings.alarmSoundPath);
+      if (customName != null) {
+        await _settingsService.saveSettings(
+          settings.copyWith(alarmSoundName: customName),
+        );
+      }
     }
     setState(() {
       _settings = settings;
@@ -133,7 +136,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (path != null && mounted) {
       final name = await _alarmService.getDisplayName(path);
       setState(() {
-        _settings = _settings.copyWith(alarmSoundPath: path);
+        _settings = _settings.copyWith(
+          alarmSoundPath: path,
+          alarmSoundName: name,
+        );
         _customSoundName = name;
       });
       _saveSettings();
@@ -157,24 +163,75 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _resetToDefault() {
     setState(() {
       _settings = const AlarmSettings();
+      _customSoundName = null;
     });
     _saveSettings();
   }
 
-  void _testAlarm() async {
-    setState(() => _isTestingAlarm = true);
+  void _testAlarm() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Test Alarm',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Choose when the alarm should ring.\nYou can close the app and wait.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 20),
+                _buildDelayOption(1, '1 minute'),
+                _buildDelayOption(2, '2 minutes'),
+                _buildDelayOption(5, '5 minutes'),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AlarmRingingScreen(
-          settings: _settings,
-          testMode: true,
+  Widget _buildDelayOption(int minutes, String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: OutlinedButton.icon(
+          onPressed: () async {
+            Navigator.pop(context);
+            await _alarmService.scheduleTestAlarm(minutes);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Test alarm set for $label. You can close the app.'),
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
+          },
+          icon: const Icon(Icons.alarm_add),
+          label: Text(label, style: const TextStyle(fontSize: 16)),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.indigo,
+            side: const BorderSide(color: Colors.indigo),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
         ),
       ),
     );
-
-    setState(() => _isTestingAlarm = false);
   }
 
   @override
@@ -325,20 +382,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             width: double.infinity,
             height: 56,
             child: ElevatedButton.icon(
-              onPressed: _isTestingAlarm ? null : _testAlarm,
-              icon: _isTestingAlarm
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.play_arrow),
-              label: Text(
-                _isTestingAlarm ? 'Playing...' : 'Test Alarm',
-                style: const TextStyle(fontSize: 16),
+              onPressed: _testAlarm,
+              icon: const Icon(Icons.play_arrow),
+              label: const Text(
+                'Test Alarm',
+                style: TextStyle(fontSize: 16),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.indigo,

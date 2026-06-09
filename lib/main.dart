@@ -1,7 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'screens/home_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await [
+    Permission.location,
+    Permission.notification,
+    Permission.scheduleExactAlarm,
+  ].request();
+
   runApp(const FajrApp());
 }
 

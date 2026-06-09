@@ -19,9 +19,11 @@ class MainActivity : FlutterActivity() {
     private var resultPending: MethodChannel.Result? = null
     private var testMediaPlayer: MediaPlayer? = null
     private var testRingtone: android.media.Ringtone? = null
+    private lateinit var alarmScheduler: AlarmScheduler
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        alarmScheduler = AlarmScheduler(applicationContext)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
@@ -45,6 +47,32 @@ class MainActivity : FlutterActivity() {
                         } else {
                             stopForegroundAlarm()
                         }
+                        result.success(null)
+                    }
+                    "scheduleAlarm" -> {
+                        val triggerAtMillis = call.argument<Long>("triggerAtMillis") ?: 0
+                        val soundPath = call.argument<String>("soundPath") ?: "default"
+                        val volume = call.argument<Int>("volume") ?: 80
+                        val vibrate = call.argument<Boolean>("vibrate") ?: true
+                        val fajrTimeMillis = call.argument<Long>("fajrTimeMillis") ?: 0
+
+                        val prefs = getSharedPreferences("fajr_alarm_prefs", MODE_PRIVATE)
+                        prefs.edit().apply {
+                            putLong("fajr_time_millis", fajrTimeMillis)
+                            putString("alarm_sound_path", soundPath)
+                            putInt("alarm_volume", volume)
+                            putBoolean("alarm_vibrate", vibrate)
+                            putBoolean("alarm_enabled", true)
+                            apply()
+                        }
+
+                        alarmScheduler.schedule(triggerAtMillis, soundPath, volume, vibrate)
+                        result.success(null)
+                    }
+                    "cancelAlarm" -> {
+                        alarmScheduler.cancel()
+                        val prefs = getSharedPreferences("fajr_alarm_prefs", MODE_PRIVATE)
+                        prefs.edit().putBoolean("alarm_enabled", false).apply()
                         result.success(null)
                     }
                     "pickAudioFile" -> {

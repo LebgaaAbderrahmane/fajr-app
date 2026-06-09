@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/location_service.dart';
 import '../services/prayer_service.dart';
+import '../services/alarm_service.dart';
+import '../services/settings_service.dart';
 import 'location_setup_screen.dart';
 import 'settings_screen.dart';
 
@@ -14,11 +16,14 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final LocationService _locationService = LocationService();
   final PrayerService _prayerService = PrayerService();
+  final AlarmService _alarmService = AlarmService();
+  final SettingsService _settingsService = SettingsService();
 
   LocationData? _location;
   PrayerTimeData? _fajrTime;
   String? _timeUntilFajr;
   bool _isLoading = true;
+  bool _alarmScheduled = false;
 
   @override
   void initState() {
@@ -43,11 +48,30 @@ class _HomeScreenState extends State<HomeScreen> {
             : null;
         _isLoading = false;
       });
+
+      _scheduleAlarmIfNeeded();
     } else {
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _scheduleAlarmIfNeeded() async {
+    if (_fajrTime == null) return;
+
+    final settings = await _settingsService.getSettings();
+    if (!settings.isEnabled) {
+      await _alarmService.cancelAlarm();
+      setState(() => _alarmScheduled = false);
+      return;
+    }
+
+    await _alarmService.scheduleAlarm(
+      fajrTime: _fajrTime!.time,
+      settings: settings,
+    );
+    setState(() => _alarmScheduled = true);
   }
 
   void _navigateToLocationSetup() async {
@@ -58,11 +82,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadData();
   }
 
-  void _navigateToSettings() {
-    Navigator.push(
+  void _navigateToSettings() async {
+    await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SettingsScreen()),
     );
+    _scheduleAlarmIfNeeded();
   }
 
   @override
@@ -177,6 +202,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 subtitle: Text(_location!.displayName),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: _navigateToLocationSetup,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            Card(
+              child: SwitchListTile(
+                title: const Text('Fajr Alarm'),
+                subtitle: Text(
+                  _alarmScheduled
+                      ? 'Scheduled — alarm will ring before Fajr'
+                      : 'Alarm is disabled',
+                ),
+                value: _alarmScheduled,
+                onChanged: (value) async {
+                  final settings = await _settingsService.getSettings();
+                  await _settingsService.saveSettings(
+                    settings.copyWith(isEnabled: value),
+                  );
+                  _scheduleAlarmIfNeeded();
+                },
+                secondary: Icon(
+                  _alarmScheduled ? Icons.alarm : Icons.alarm_off,
+                  color: _alarmScheduled ? Colors.indigo : Colors.grey,
+                ),
               ),
             ),
 
