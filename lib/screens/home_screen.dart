@@ -23,7 +23,6 @@ class _HomeScreenState extends State<HomeScreen> {
   PrayerTimeData? _fajrTime;
   String? _timeUntilFajr;
   bool _isLoading = true;
-  bool _alarmScheduled = false;
 
   @override
   void initState() {
@@ -63,7 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final settings = await _settingsService.getSettings();
     if (!settings.isEnabled) {
       await _alarmService.cancelAlarm();
-      setState(() => _alarmScheduled = false);
       return;
     }
 
@@ -71,7 +69,6 @@ class _HomeScreenState extends State<HomeScreen> {
       fajrTime: _fajrTime!.time,
       settings: settings,
     );
-    setState(() => _alarmScheduled = true);
   }
 
   void _navigateToLocationSetup() async {
@@ -202,31 +199,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 subtitle: Text(_location!.displayName),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: _navigateToLocationSetup,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            Card(
-              child: SwitchListTile(
-                title: const Text('Fajr Alarm'),
-                subtitle: Text(
-                  _alarmScheduled
-                      ? 'Scheduled — alarm will ring before Fajr'
-                      : 'Alarm is disabled',
-                ),
-                value: _alarmScheduled,
-                onChanged: (value) async {
-                  final settings = await _settingsService.getSettings();
-                  await _settingsService.saveSettings(
-                    settings.copyWith(isEnabled: value),
-                  );
-                  _scheduleAlarmIfNeeded();
-                },
-                secondary: Icon(
-                  _alarmScheduled ? Icons.alarm : Icons.alarm_off,
-                  color: _alarmScheduled ? Colors.indigo : Colors.grey,
-                ),
               ),
             ),
 

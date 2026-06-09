@@ -14,6 +14,7 @@ import android.os.IBinder
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import androidx.core.app.NotificationCompat
 
 class AlarmForegroundService : Service() {
@@ -22,6 +23,7 @@ class AlarmForegroundService : Service() {
     private var vibrator: Vibrator? = null
 
     companion object {
+        const val TAG = "AlarmForegroundService"
         const val CHANNEL_ID = "fajr_alarm_channel"
         const val NOTIFICATION_ID = 1
         const val ACTION_START = "com.fajr_alarm.START_ALARM"
@@ -51,7 +53,11 @@ class AlarmForegroundService : Service() {
                 val vibrate = intent.getBooleanExtra(EXTRA_VIBRATE, true)
 
                 val notification = buildNotification()
-                startForeground(NOTIFICATION_ID, notification)
+                try {
+                    startForeground(NOTIFICATION_ID, notification)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to start foreground", e)
+                }
                 playAlarm(soundPath, volume, vibrate)
             }
         }
@@ -93,37 +99,73 @@ class AlarmForegroundService : Service() {
 
         val vol = volume / 100.0f
 
-        if (soundPath.startsWith("content://")) {
-            val uri = android.net.Uri.parse(soundPath)
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
-                setDataSource(applicationContext, uri)
-                isLooping = true
-                setVolume(vol, vol)
-                prepare()
-                start()
+        try {
+            if (soundPath.startsWith("content://")) {
+                val uri = android.net.Uri.parse(soundPath)
+                mediaPlayer = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build()
+                    )
+                    setDataSource(applicationContext, uri)
+                    isLooping = true
+                    setVolume(vol, vol)
+                    setOnErrorListener { _, what, extra ->
+                        Log.e(TAG, "MediaPlayer error: what=$what extra=$extra")
+                        reset()
+                        try {
+                            setAudioAttributes(
+                                AudioAttributes.Builder()
+                                    .setUsage(AudioAttributes.USAGE_ALARM)
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                    .build()
+                            )
+                            setDataSource(applicationContext, uri)
+                            prepare()
+                            start()
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Retry failed, falling back to default alarm", e)
+                            playDefaultAlarm(vol)
+                        }
+                        true
+                    }
+                    prepare()
+                    start()
+                }
+            } else if (soundPath.startsWith("/")) {
+                mediaPlayer = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build()
+                    )
+                    setDataSource(soundPath)
+                    isLooping = true
+                    setVolume(vol, vol)
+                    prepare()
+                    start()
+                }
+            } else {
+                playDefaultAlarm(vol)
             }
-        } else if (soundPath.startsWith("/")) {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
-                setDataSource(soundPath)
-                isLooping = true
-                setVolume(vol, vol)
-                prepare()
-                start()
-            }
-        } else {
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to play alarm sound: $soundPath", e)
+            playDefaultAlarm(vol)
+        }
+
+        if (vibrate) {
+            startVibration()
+        }
+    }
+
+    private fun playDefaultAlarm(vol: Float) {
+        try {
             val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             if (uri != null) {
                 currentRingtone = RingtoneManager.getRingtone(applicationContext, uri)
                 currentRingtone?.let {
@@ -133,10 +175,8 @@ class AlarmForegroundService : Service() {
                     it.play()
                 }
             }
-        }
-
-        if (vibrate) {
-            startVibration()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to play default alarm", e)
         }
     }
 
@@ -155,13 +195,17 @@ class AlarmForegroundService : Service() {
 
     private fun stopAudio() {
         mediaPlayer?.let {
-            if (it.isPlaying) it.stop()
+            try {
+                if (it.isPlaying) it.stop()
+            } catch (_: Exception) {}
             it.release()
         }
         mediaPlayer = null
 
         currentRingtone?.let {
-            if (it.isPlaying) it.stop()
+            try {
+                if (it.isPlaying) it.stop()
+            } catch (_: Exception) {}
         }
         currentRingtone = null
 
